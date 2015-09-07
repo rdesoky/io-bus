@@ -18,7 +18,7 @@ module.exports = function(param){
 		io = socket_io.listen(param);//join existing tcp server
 		param.on("request",function(req,res){
 		//param.use("/msgbus/web_client.js",function(req,res){
-			if(req.url == "/msgbus/web-client.js") {
+			if(req.url == "/io-bus/web-client.js") {
 				var etag = req.headers['if-none-match'];
 				if (etag) {
 					if (client_version == etag) {
