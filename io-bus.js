@@ -9,17 +9,14 @@ var subscribers = {};
 var client_version = "1.0.3";
 module.exports = function(param){
 	var io,server;
-
 	if(param == undefined){
-		io = socket_io(9666,{serveClient:false});// start web sockets server
-	}else if(typeof param == "number"){// listening to a different port number
-		io = socket_io(param,{serveClient:false});// start server on a custom port
-	}else{
-		server = param;
-		io = socket_io.listen(server);//join existing tcp server
+		param = 9666;
 	}
-	server = server || io.httpServer;
-	server.removeAllListeners('request');
+	io = socket_io(param);// start web sockets server
+	server = io.httpServer;
+	if(typeof param == "number"){// listening to a different port number
+		server.removeAllListeners('request');
+	}
 	server.on("request",function(req,res){
 		console.log("Request " + req.url);
 		if(req.url == "/io-bus/web-client.js") {
