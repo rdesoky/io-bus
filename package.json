@@ -1,13 +1,12 @@
 {
   "name": "io-bus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
+  "main":"io-bus.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "nwjs"
-  ],
+  "keywords": [],
   "author": "Ramy Eldesoky",
   "license": "MIT",
   "dependencies": {
