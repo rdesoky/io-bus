@@ -8,36 +8,40 @@ var request_handlers = {};
 var subscribers = {};
 var client_version = "1.0.3";
 module.exports = function(param){
-	var io;
+	var io,server;
 
 	if(param == undefined){
-		io = socket_io.listen(9666);// start web sockets server
+		io = socket_io(9666,{serveClient:false});// start web sockets server
 	}else if(typeof param == "number"){// listening to a different port number
-		io = socket_io(param);// start server on a custom port
+		io = socket_io(param,{serveClient:false});// start server on a custom port
 	}else{
-		io = socket_io.listen(param);//join existing tcp server
-		param.on("request",function(req,res){
-		//param.use("/msgbus/web_client.js",function(req,res){
-			if(req.url == "/io-bus/web-client.js") {
-				var etag = req.headers['if-none-match'];
-				if (etag) {
-					if (client_version == etag) {
-						res.writeHead(304);
-						res.end();
-						return;
-					}
-				}
-				var read = require('fs').readFileSync;
-				res.setHeader('Content-Type', 'application/javascript');
-				res.setHeader('ETag', client_version);
-				res.writeHead(200);
-				var scriptContent =read(require.resolve("socket.io/node_modules/socket.io-client/socket.io.js"), 'utf-8') +
-					read(require.resolve("js-promise/js-promise.js"), 'utf-8') +
-					read(require.resolve("./web-client.js"), 'utf-8');
-				res.end(scriptContent);
-			}
-		});
+		server = param;
+		io = socket_io.listen(server);//join existing tcp server
 	}
+	server = server || io.httpServer;
+	server.removeAllListeners('request');
+	server.on("request",function(req,res){
+		console.log("Request " + req.url);
+		if(req.url == "/io-bus/web-client.js") {
+			var etag = req.headers['if-none-match'];
+			if (etag) {
+				if (client_version == etag) {
+					res.writeHead(304);
+					res.end();
+					return;
+				}
+			}
+			var read = require('fs').readFileSync;
+			res.setHeader('Content-Type', 'application/javascript');
+			res.setHeader('ETag', client_version);
+			res.writeHead(200);
+			var scriptContent =read(require.resolve("socket.io/node_modules/socket.io-client/socket.io.js"), 'utf-8') +
+				read(require.resolve("js-promise/js-promise.js"), 'utf-8') +
+				read(require.resolve("./web-client.js"), 'utf-8');
+			res.end(scriptContent);
+		}
+	});
+
 
 	io.on("connect",function(socket){// client connection
 
@@ -112,3 +116,4 @@ module.exports = function(param){
 	});
 
 };
+module.exports.MessageBus = mb_module;// for server side connections
