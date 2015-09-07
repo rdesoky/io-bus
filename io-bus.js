@@ -36,6 +36,9 @@ module.exports = function(param){
 				read(require.resolve("js-promise/js-promise.js"), 'utf-8') +
 				read(require.resolve("./web-client.js"), 'utf-8');
 			res.end(scriptContent);
+		}else if (typeof param == "number"){
+			res.writeHead(404);
+			res.end();
 		}
 	});
 
