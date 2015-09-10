@@ -2,7 +2,7 @@
  * Created by Ramy Eldesoky on 8/14/2015.
  */
 var socket_io = require('socket.io');
-var mb_module = require("./message_bus");
+var mb_server = require("./message_bus");
 var Promise = require("js-promise");
 var request_handlers = {};
 var subscribers = {};
@@ -55,7 +55,7 @@ module.exports = function(param){
 				return;
 			}
 			socket_owner = auth.client_id;
-			msg_bus = mb_module.connect(socket_owner);
+			msg_bus = mb_server.connect(socket_owner);
 			console.log("io: Client (" + socket_owner + ") connected to Message Bus via:" + JSON.stringify(auth));
 
 			socket.on("mb_send",function(payload){// payload should be in the form {topic:"<topic>", msg:{},to:"<optional>"}
@@ -86,7 +86,7 @@ module.exports = function(param){
 
 				request_handlers[request_handler.callback] = msg_bus.addRequestHandler(request_handler.api, function(query, from){//request format {topic:<topic>, query:{..},callback:<unique_id>}
 					console.log( "io: IoRegRouter received Request from(" + from + "), query(" + JSON.stringify(query) + ")" );
-					var callback = mb_module.uuid();
+					var callback = mb_server.uuid();
 					var ret = new Promise();
 					// wait for socket response
 					socket.once(callback, function (response) {
@@ -115,5 +115,6 @@ module.exports = function(param){
 		})
 	});
 
+	return mb_server;
 };
-module.exports.MessageBus = mb_module;// for server side connections
+//module.exports.MessageBus = mb_server;// for server side connections
