@@ -7,41 +7,52 @@ var Promise = require("js-promise");
 var request_handlers = {};
 var subscribers = {};
 var client_version = "1.0.3";
-module.exports = function(param){
+module.exports = function(param,express_app){
 	var io,server;
 	if(param == undefined){
 		param = 9666;
 	}
-	io = socket_io(param);// start web sockets server
+	io = socket_io(param,{serveClient:false});// start web sockets server
 	server = io.httpServer;
 	if(typeof param == "number"){// listening to a different port number
 		server.removeAllListeners('request');
 	}
-	server.on("request",function(req,res){
-		console.log("Request " + req.url);
-		if(req.url == "/io-bus/web-client.js") {
-			var etag = req.headers['if-none-match'];
-			if (etag) {
-				if (client_version == etag) {
-					res.writeHead(304);
-					res.end();
-					return;
-				}
+	if(express_app){
+		express_app.use("/io-bus/web-client.js",function(req,res,next){
+			serveClient(req,res);
+		});
+	}
+	else {
+		server.on("request", function (req, res) {
+			console.log("Request " + req.url);
+			if (req.url == "/io-bus/web-client.js") {
+				serveClient(res);
+			} else if (typeof param == "number") {
+				res.writeHead(404);
+				res.end();
 			}
-			var read = require('fs').readFileSync;
-			res.setHeader('Content-Type', 'application/javascript');
-			res.setHeader('ETag', client_version);
-			res.writeHead(200);
-			var scriptContent =read(require.resolve("socket.io/node_modules/socket.io-client/socket.io.js"), 'utf-8') +
-				read(require.resolve("js-promise/js-promise.js"), 'utf-8') +
-				read(require.resolve("./web-client.js"), 'utf-8');
-			res.end(scriptContent);
-		}else if (typeof param == "number"){
-			res.writeHead(404);
-			res.end();
-		}
-	});
+		});
+	}
 
+	function serveClient(req,res){
+		var etag = req.headers['if-none-match'];
+		if (etag) {
+			if (client_version == etag) {
+				res.writeHead(304);
+				res.end();
+				return;
+			}
+		}
+		var read = require('fs').readFileSync;
+		res.setHeader('Content-Type', 'application/javascript');
+		res.setHeader('ETag', client_version);
+		res.writeHead(200);
+		var scriptContent =read(require.resolve("socket.io/node_modules/socket.io-client/socket.io.js"), 'utf-8') +
+			read(require.resolve("js-promise/js-promise.js"), 'utf-8') +
+			read(require.resolve("./web-client.js"), 'utf-8');
+		res.end(scriptContent);
+
+	}
 
 	io.on("connect",function(socket){// client connection
 
@@ -117,4 +128,3 @@ module.exports = function(param){
 
 	return mb_server;
 };
-//module.exports.MessageBus = mb_server;// for server side connections
