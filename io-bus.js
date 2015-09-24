@@ -14,9 +14,7 @@ module.exports = function(param,express_app){
 	}
 	io = socket_io(param,{serveClient:false});// start web sockets server
 	server = io.httpServer;
-	if(typeof param == "number"){// listening to a different port number
-		server.removeAllListeners('request');
-	}
+
 	if(express_app){
 		express_app.use("/io-bus/web-client.js",function(req,res,next){
 			serveClient(req,res);
