@@ -10,21 +10,21 @@ var express = require('express');
 var app = express();
 var httpServer = app.listen( 3000, function(){} );
 var msgBusServer = io_bus(httpServer, app);
-var msgBus = msgBusServer.connect("BackendServices");
 
-var data = {
+app.use( '/', express.static('./static/',{index:"index.html"}) );
+
+var sample_data = {
     users:1000
 };
+var msgBus = msgBusServer.connect("BackendServices");
 msgBus.addRequestHandler("GetData",function(params, from){
-    return data;
+    return sample_data;
 });
 msgBus.addRequestHandler("AddUser",function(params,from){
-    data.users += params.users;
+    sample_data.users += params.users;
     msgBus.publish("DataUpdated",data);
-    return data;
+    return sample_data;
 });
-
-
 
 
 ```
@@ -43,7 +43,7 @@ msgBus.addRequestHandler("AddUser",function(params,from){
             ioBus.request("GetData").then(function(data){
                //Refresh UI
                console.log(data);
-               ioBus.publish("UIUpdated",{users:data.users});
+               ioBus.send("UIUpdated",{users:data.users});
             })
         }
     });

@@ -146,6 +146,9 @@ var MsgBusManager = {
 					})
 				},1);
 			},
+            publish:function(){
+                return this.send.call(this,arguments);
+            },
 			request:function(api, params, timeout, to){
 				var callback = uuid();
 				console.log( "mbus: ReqRouter received request(" + api + "), with query(" + JSON.stringify(params) + ") from(" + my_id + ")");
