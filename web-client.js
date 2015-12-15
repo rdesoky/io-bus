@@ -13,9 +13,16 @@
 				return isConnected;
 			},
 			publish:function(topic, msg, to){
-				socket.emit("mb_send",{topic:topic, msg:msg, to:to});
+                if(!isConnected){
+                    return false;
+                }
+                socket.emit("mb_send",{topic:topic, msg:msg, to:to});
+                return true;
 			},
 			on:function(topic, callback, from, uuid){
+                if(!isConnected){
+                    return false;
+                }
 				var callback_id = uuid || create_uuid();
 				socket.on(callback_id,function(msg){
 					callback(msg);
@@ -36,11 +43,18 @@
 				},from);
 			},
 			off:function(callback_id){
+                if(!callback_id || !isConnected){
+                    return false;
+                }
 				socket.emit("mb_unsubscribe",{callback:callback_id});
 				socket.off(callback_id);
 				delete listeners[callback_id];
+                return true;
 			},
 			request:function(api, query, to){
+                if(!isConnected){
+                    return CPromise.error({disconnected:true});
+                }
 				var pr = new CPromise();
 				var callback_id = create_uuid();
 				socket.on(callback_id,function(results){
@@ -73,11 +87,11 @@
 
 	if(typeof define === "function" && define.amd ){//AMD RequireJS
 		define("web-client",function(){
-			return CPromise;
+			return MsgBus
 		});
 	}
 	else if(typeof module !== "undefined") {//CommonJS
-		module.exports = CPromise;
+		module.exports = MsgBus;
 	}else if(window !== undefined){
 		window.MsgBus = MsgBus;
 	}

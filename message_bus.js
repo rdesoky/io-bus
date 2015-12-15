@@ -3,7 +3,7 @@
  */
 var Promise = require("js-promise");
 var listeners = {
-// topic:{
+// {topic}:{
 //      "{unique_handle}":{
 //          only_from:"{unique_id}",//optional
 //          listener_id:"{unique_id}",
@@ -63,7 +63,7 @@ function deliverMessage(msg){
 	console.log("mbus: The msg: " + JSON.stringify(msg) + " has been delivered to (" + listeners_count + ") subscribers");
 }
 
-module.exports = {
+var MsgBusManager = {
 	uuid:uuid,
 
 	connect:function(my_id){
@@ -73,7 +73,7 @@ module.exports = {
 
 		var usedHandles = [];
 
-		return {
+		var MsgBusConnection = {
 			my_id:my_id,
 			//listeners:listeners,// for debugging purpose
 
@@ -227,5 +227,9 @@ module.exports = {
 				this.off(usedHandles);
 			}
 		}
+
+        return MsgBusConnection;
 	}
 };
+
+module.exports = MsgBusManager;

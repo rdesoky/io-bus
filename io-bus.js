@@ -19,6 +19,9 @@ module.exports = function(param,express_app){
 		express_app.use("/io-bus/web-client.js",function(req,res,next){
 			serveClient(req,res);
 		});
+        express_app.use(require('connect-inject')({
+            snippet:'<script src="/io-bus/web-client.js"></script>'
+        }));
 	}
 	else {
 		server.on("request", function (req, res) {
