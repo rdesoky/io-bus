@@ -33,23 +33,35 @@ msgBus.addRequestHandler("AddUser",function(params,from){
 ```
 <button id="UpdateUsers">Update</button>
 <script>
-    var ioBus = MsgBus("MyClientID",function(connected){//connection callback
-        if(connected){
-            ioBus.on("DataUpdated",function(msg){
-               console.log(msg.data);
-               //Do something
-            });
+    window.addEventListener("DOMContentLoaded",function(){
 
-            ioBus.request("GetData").then(function(response){
-               //Refresh UI
-               console.log(response.data);
-               ioBus.send("UIUpdated",{users:response.data.users});
-            })
-        }
-    });
-    document.getElementById("UpdateUsers").addEventListener("click",function(){
-        ioBus.request("AddUser",{users:1})
-    });
+        var ioBus = MsgBus("MyClientID",function(connected){//connection callback
+            if(connected){
+                ioBus.on("DataUpdated",function(msg){
+                   console.log(msg.data);
+                   //Do something
+                });
+
+                ioBus.request("GetData").then(function(response){
+                   //Refresh UI
+                   console.log(response.data);
+                   ioBus.send("UIUpdated",{users:response.data.users});
+                })
+            }
+        });
+        
+        document.getElementById("UpdateUsers").addEventListener("click",function(){
+            ioBus.request("AddUser",{users:1}).then(
+                function(response){
+                    console.log("AddUser Succeeded");
+                    console.log(response.data);
+                },
+                function(err){// mostly from disconnected socket
+                    console.error(err);
+                }
+            );
+        });
+    })
 </script>
 
 ```

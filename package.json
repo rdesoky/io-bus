@@ -1,6 +1,6 @@
 {
   "name": "io-bus",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "",
   "main": "io-bus.js",
   "scripts": {
