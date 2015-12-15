@@ -48,8 +48,8 @@ module.exports = function(param,express_app){
 		res.setHeader('Content-Type', 'application/javascript');
 		res.setHeader('ETag', client_version);
 		res.writeHead(200);
-		var scriptContent =read(require.resolve("socket.io/node_modules/socket.io-client/socket.io.js"), 'utf-8') +
-			read(require.resolve("js-promise/js-promise.js"), 'utf-8') +
+		var scriptContent =read(require.resolve("./resources/socket.io.js"), 'utf-8') +
+			read(require.resolve("./resources/js-promise.js"), 'utf-8') +
 			read(require.resolve("./web-client.js"), 'utf-8');
 		res.end(scriptContent);
 
