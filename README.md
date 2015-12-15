@@ -35,15 +35,15 @@ msgBus.addRequestHandler("AddUser",function(params,from){
 <script>
     var ioBus = MsgBus("MyClientID",function(connected){//connection callback
         if(connected){
-            ioBus.on("DataUpdated",function(data){
-               console.log(data);
+            ioBus.on("DataUpdated",function(msg){
+               console.log(msg.data);
                //Do something
             });
 
-            ioBus.request("GetData").then(function(data){
+            ioBus.request("GetData").then(function(response){
                //Refresh UI
-               console.log(data);
-               ioBus.send("UIUpdated",{users:data.users});
+               console.log(response.data);
+               ioBus.send("UIUpdated",{users:response.data.users});
             })
         }
     });
