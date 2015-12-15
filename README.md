@@ -22,7 +22,7 @@ msgBus.addRequestHandler("GetData",function(params, from){
 });
 msgBus.addRequestHandler("AddUser",function(params,from){
     sample_data.users += params.users;
-    msgBus.publish("DataUpdated",data);
+    msgBus.publish("DataUpdated",sample_data);
     return sample_data;
 });
 
