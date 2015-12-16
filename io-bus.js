@@ -12,7 +12,7 @@ module.exports = function(param,express_app){
 	if(param == undefined){
 		param = 9666;
 	}
-	io = socket_io(param,{serveClient:false});// start web sockets server
+	io = new socket_io(param,{serveClient:false});// start web sockets server
 	server = io.httpServer;
 
 	if(express_app){
@@ -24,10 +24,17 @@ module.exports = function(param,express_app){
         }));
 	}
 	else {
+		server.removeAllListeners('request');
+		server.on('error',function(msg){
+			if(msg.code == 'EADDRINUSE') {
+				console.log("Another server is running on the same port");
+				console.log("Server failure.. stopping");
+			}
+		});
 		server.on("request", function (req, res) {
 			console.log("Request " + req.url);
 			if (req.url == "/io-bus/web-client.js") {
-				serveClient(res);
+				serveClient(req, res, server);//TODO: replace io(/*host address*/)
 			} else if (typeof param == "number") {
 				res.writeHead(404);
 				res.end();
@@ -35,7 +42,7 @@ module.exports = function(param,express_app){
 		});
 	}
 
-	function serveClient(req,res){
+	function serveClient(req,res,server){
 		var etag = req.headers['if-none-match'];
 		if (etag) {
 			if (client_version == etag) {
@@ -48,9 +55,13 @@ module.exports = function(param,express_app){
 		res.setHeader('Content-Type', 'application/javascript');
 		res.setHeader('ETag', client_version);
 		res.writeHead(200);
+		var webClient = read(require.resolve("./web-client.js"), 'utf-8');
+		if(server){//replace io(/*{host}*/) if not served by express app
+			webClient = webClient.replace("/*{host}*/",'"http://localhost:9666"');
+		}
 		var scriptContent =read(require.resolve("./resources/socket.io.js"), 'utf-8') +
 			read(require.resolve("./resources/js-promise.js"), 'utf-8') +
-			read(require.resolve("./web-client.js"), 'utf-8');
+			webClient;
 		res.end(scriptContent);
 
 	}

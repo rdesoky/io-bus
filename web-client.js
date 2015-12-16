@@ -4,7 +4,7 @@
 (function(){
 
 	var MsgBus = function(client_id, connection_callback){
-		var socket = io();
+		var socket = io(/*{host}*/);
 		var listeners = {};
 		var isConnected = false;
 
