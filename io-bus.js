@@ -9,6 +9,7 @@ var request_handlers = {};
 var subscribers = {};
 var client_version = "1.0.3";
 var debug = require("debug")("io-bus");
+var connect_inject = require('connect-inject');
 
 module.exports = function(server,express_app){
 	var ret = new Promise();
@@ -40,7 +41,7 @@ module.exports = function(server,express_app){
 			express_app.use("/io-bus/web-client.js",function(req,res,next){
 				serveClient(req,res);
 			});
-			express_app.use(require('connect-inject')({
+			express_app.use(connect_inject({
 				snippet:'<script src="/io-bus/web-client.js"></script>'
 			}));
 		}else{
@@ -57,7 +58,6 @@ module.exports = function(server,express_app){
 			res.end();
 		}
 	}
-	//var io = new socket_io(url,{serveClient:false});// start web sockets server
 
 	httpServer = io.httpServer;
 
@@ -291,3 +291,5 @@ module.exports = function(server,express_app){
 	return ret;
 	//return mb_server;
 };
+
+module.exports.inject = connect_inject;
