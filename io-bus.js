@@ -25,14 +25,18 @@ module.exports = function(server,express_app){
 		io = new socket_io(httpServer);
 		httpServer.on('error',function(msg){
 			if(msg.code == 'EADDRINUSE') {
-				console.log("Another server is running on the same port");
-				debug("Server failure.. stopping");
+				debug("Another server is running on port %s", server);
+				debug("Trying to connect to the other server as a client");
+				//debug("Server failure.. stopping");
 				// connect to that server
 				io = socket_io_client("http://localhost:" + server);
 				io.on("connect",function(){
 					debug("Successfully connected to the other server");
 					connectAsClient(io);
 				});
+				io.on("disconnect",function(){
+					debug("Disconnected from the server on port %s", port);
+				})
 			}
 		});
 	}else{
