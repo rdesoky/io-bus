@@ -152,7 +152,7 @@ var MsgBusManager = {
                 return this.send.call(this,arguments);
             },
 			request:function(api, params, timeout, to){
-				var callback = uuid();
+				var callback = "response_" + api + "_" + uuid();
 				debug( "ReqRouter received request(" + api + "), with query(" + JSON.stringify(params) + ") from(" + my_id + ")");
 				var retPromise = this.once(callback, timeout, to);
 

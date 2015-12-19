@@ -183,6 +183,7 @@ module.exports = function(server,express_app){
 	}
 
 	function connectAsClient(socket){
+		//TODO: handle reconnection
 		var isConnected = true;
 
 		socket.on("disconnect",function(){
