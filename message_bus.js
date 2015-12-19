@@ -137,7 +137,7 @@ var MsgBusManager = {
 				}catch(e){
 					info_str = data;
 				}
-				debug("Publishing to topic(" + topic + "), content(" + info_str + ") to(" + (to ? to : " all") + ")");
+				debug("Publishing to topic(" + topic + "), content(" + info_str + ") to(" + (to ? to : "all") + ")");
 
 				setTimeout(function(){
 					deliverMessage({

@@ -148,7 +148,7 @@ module.exports = function(server,express_app){
 
 				request_handlers[request_handler.callback] = msg_bus.addRequestHandler(request_handler.api, function(query, from){//request format {topic:<topic>, query:{..},callback:<unique_id>}
 					debug( "io: IoRegRouter received Request from(" + from + "), query(" + JSON.stringify(query) + ")" );
-					var callback = mb_server.uuid();
+					var callback = "response_" + request_handler.api + "_" + mb_server.uuid();
 					var ret = new Promise();
 					// wait for socket response
 					socket.once(callback, function (response) {
