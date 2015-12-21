@@ -5,26 +5,31 @@ Add io-bus middleware to your express application to provide MsgBus interface be
 
 ### Server side code
 ```javascript
-var io_bus = require('io-bus');
+var ioBus = require('io-bus');
 var express = require('express');
 var app = express();
 var httpServer = app.listen( 3000, function(){} );
-var msgBusServer = io_bus(httpServer, app);
-
-app.use( '/', express.static('./static/',{index:"index.html"}) );
 
 var sample_data = {
     users:1000
 };
-var msgBus = msgBusServer.connect("BackendServices");
-msgBus.addRequestHandler("GetData",function(params, from){
-    return sample_data;
+
+ioBus(9666).connect("BackendServices",function(msgBus){
+	msgBus.addRequestHandler("GetData",function(params, from){
+	    return sample_data;
+	});
+	msgBus.addRequestHandler("AddUser",function(params,from){
+	    sample_data.users += params.users;
+	    msgBus.publish("DataUpdated",sample_data);
+	    return sample_data;
+	});
 });
-msgBus.addRequestHandler("AddUser",function(params,from){
-    sample_data.users += params.users;
-    msgBus.publish("DataUpdated",sample_data);
-    return sample_data;
-});
+
+app.use(ioBus.inject({
+	snippet:'<script src="http://localhost:9666/io-bus/web-client.js"></script>'
+}));
+
+app.use( '/', express.static('./static/',{index:"index.html"}) );
 
 
 ```
@@ -37,21 +42,22 @@ msgBus.addRequestHandler("AddUser",function(params,from){
 
         var ioBus = MsgBus("MyClientID",function(connected){//connection callback
             if(connected){
-                ioBus.on("DataUpdated",function(msg){
+                ioBus.on('DataUpdated',function(msg){
+                   console.log('Data has been updated');
                    console.log(msg.data);
-                   //Do something
                 });
 
-                ioBus.request("GetData").then(function(response){
+                ioBus.request('GetData').then(function(response){
                    //Refresh UI
+                   console.log('GetData responded');
                    console.log(response.data);
-                   ioBus.send("UIUpdated",{users:response.data.users});
+                   ioBus.publish("UIUpdated",{users:response.data.users});
                 })
             }
         });
         
-        document.getElementById("UpdateUsers").addEventListener("click",function(){
-            ioBus.request("AddUser",{users:1}).then(
+        document.getElementById('UpdateUsers').addEventListener('click',function(){
+            ioBus.request('AddUser',{users:1}).then(
                 function(response){
                     console.log("AddUser Succeeded");
                     console.log(response.data);
@@ -61,7 +67,9 @@ msgBus.addRequestHandler("AddUser",function(params,from){
                 }
             );
         });
+        
     })
+    
 </script>
 
 ```

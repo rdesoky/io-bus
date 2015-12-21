@@ -11,36 +11,29 @@ var client_version = "1.0.3";
 var debug = require("debug")("io-bus");
 var connect_inject = require('connect-inject');
 
-module.exports = function(server,express_app){
-	var ret = new Promise();
+var ioBus = function(server,express_app){
 
 	if(server == undefined){
 		server = 9666;
 	}
 	var io, httpServer;
 
-	if(typeof server == "number"){
+	if(typeof server == "number"){// bind to port number
 		httpServer = require("http").Server(httpServerHandler);
 		httpServer.listen(server);
 		io = new socket_io(httpServer);
+		// handle
 		httpServer.on('error',function(msg){
 			if(msg.code == 'EADDRINUSE') {
-				debug("Another server is running on port %s", server);
-				debug("Trying to connect to the other server as a client");
-				//debug("Server failure.. stopping");
-				// connect to that server
-				io = socket_io_client("http://localhost:" + server);
-				io.on("connect",function(){
-					debug("Successfully connected to the other server");
-					connectAsClient(io);
-				});
-				io.on("disconnect",function(){
-					debug("Disconnected from the server on port %s", port);
-				})
+				console.log("Another server is running on the port %s", server);
+				// debug("Server failure.. stopping");
+				// connect to the other server
+				connectAsClient("http://localhost:" + server);
 			}
 		});
-	}else{
-		io = new socket_io(server);// attach to existing server
+	}
+	else{ // bind to existing http server
+		io = new socket_io(server);// attach to passed http server
 		if(express_app){
 			express_app.use("/io-bus/web-client.js",function(req,res,next){
 				serveClient(req,res);
@@ -53,6 +46,10 @@ module.exports = function(server,express_app){
 		}
 	}
 
+	//httpServer = io.httpServer;
+
+	io.on("connect", connectAsHost);// install host socket interface
+
 	function httpServerHandler(req,res){
 		if (req.url == "/io-bus/web-client.js") {
 			debug("Requested " + req.url);
@@ -62,8 +59,6 @@ module.exports = function(server,express_app){
 			res.end();
 		}
 	}
-
-	httpServer = io.httpServer;
 
 	function serveClient(req,res,url){
 		var etag = req.headers['if-none-match'];
@@ -89,12 +84,15 @@ module.exports = function(server,express_app){
 
 	}
 
-	io.on("connect", connectAsHost);
-
+	var isConnected = false;
+	var isHost = false;
+	// install host socket interface
 	function connectAsHost(socket){// client connection
+		isHost = true;
+		isConnected = true;
 
 		// authorization should be added before
-		debug("io: A client has connected to socket.io");
+		debug("A client has connected to socket.io");
 		var socket_owner, msg_bus;
 
 		socket.on("mb_connect",function(auth){// mb_connect should be { app_id:<app_id>, client_id:<client_id> }
@@ -102,21 +100,22 @@ module.exports = function(server,express_app){
 			if(!auth){
 				return;
 			}
+			socket.emit("mb_accepted",auth);
 			socket_owner = auth.client_id;
 			mb_server.connect(socket_owner,function(mb){
 				msg_bus = mb;
 			});
-			debug("io: Client (" + socket_owner + ") connected to Message Bus via:" + JSON.stringify(auth));
+			debug("Client (" + socket_owner + ") connected to Message Bus via:" + JSON.stringify(auth));
 
 			socket.on("mb_send",function(payload){// payload should be in the form {topic:"<topic>", msg:{},to:"<optional>"}
-				debug("io: Received mb_send from(" + socket_owner + "), payload(" + JSON.stringify(payload) + ")");
+				debug("Received mb_send from(" + socket_owner + "), payload(" + JSON.stringify(payload) + ")");
 				if(!msg_bus) {
 					return;
 				}
 				msg_bus.send(payload.topic, payload.msg, payload.to);
 			});
 			socket.on("mb_request",function(request){// request should be in the form {topic:"<topic>", callback:"<unique_id>",query:{},to:"<optional>",timeout:<optional>}
-				debug("io: Received mb_request from(" + socket_owner + "), request(" + JSON.stringify(request) + ")");
+				debug("Received mb_request from(" + socket_owner + "), request(" + JSON.stringify(request) + ")");
 				if(!msg_bus) {
 					return;
 				}
@@ -128,7 +127,7 @@ module.exports = function(server,express_app){
 				});
 			});
 			socket.on("mb_subscribe",function(payload){// payload should be {callback:"<unique_id>",topic:"<topic>",from:"<optional>"}
-				debug( "io: Received mb_subscribe from(" + socket_owner + "), payload(" + JSON.stringify(payload) + ")" );
+				debug( "Received mb_subscribe from(" + socket_owner + "), payload(" + JSON.stringify(payload) + ")" );
 				if(!msg_bus) {
 					return;
 				}
@@ -144,24 +143,24 @@ module.exports = function(server,express_app){
 			});
 			socket.on("mb_add_request_handler",function(request_handler){//request_handler format {api:<api>, callback:<unique_id>,limit_from:<optional>}
 
-				debug( "io: IoRegRouter received mb_add_request_handler from(" + socket_owner + "), handler_info(" + JSON.stringify(request_handler) + ")" );
+				debug( "IoRegRouter received mb_add_request_handler from(" + socket_owner + "), handler_info(" + JSON.stringify(request_handler) + ")" );
 
 				if(!msg_bus) {
 					return;
 				}
 
 				request_handlers[request_handler.callback] = msg_bus.addRequestHandler(request_handler.api, function(query, from){//request format {topic:<topic>, query:{..},callback:<unique_id>}
-					debug( "io: IoRegRouter received Request from(" + from + "), query(" + JSON.stringify(query) + ")" );
+					debug( "IoRegRouter received Request from(" + from + "), query(" + JSON.stringify(query) + ")" );
 					var callback = "response_" + request_handler.api + "_" + mb_server.uuid();
 					var ret = new Promise();
 					// wait for socket response
 					socket.once(callback, function (response) {
-						debug( "io: IoReqRouter received a response from(" + socket_owner + "), payload(" + JSON.stringify(response) + ")" );
+						debug( "IoReqRouter received a response from(" + socket_owner + "), payload(" + JSON.stringify(response) + ")" );
 						ret.resolve(response);
 					});
 					// send request to socket
 					var payload = {api:request_handler.api, query:query, from: from, callback: callback};
-					debug( "io: IoReqRouter Emits request to (" + socket_owner + ":" + request_handler.callback + "), payload(" + JSON.stringify(payload) + ")" );
+					debug( "IoReqRouter Emits request to (" + socket_owner + ":" + request_handler.callback + "), payload(" + JSON.stringify(payload) + ")" );
 					socket.emit(request_handler.callback, payload);
 					return ret;
 
@@ -182,119 +181,157 @@ module.exports = function(server,express_app){
 				msg_bus.disconnect();
 			}
 		});
-
-		ret.resolve(mb_server);
 	}
 
-	function connectAsClient(socket){
-		//TODO: handle reconnection
-		var isConnected = true;
+	// install client socket interface
+	function connectAsClient(url){
+		isHost = false;
+		isConnected = false;
+		io = socket_io_client("http://localhost:" + server);
 
-		socket.on("disconnect",function(){
+		io.on("disconnect",function(){
+			debug("Disconnected from the server on port %s", server);
+			//connectToServer();//try reconnecting
 			isConnected = false;
 		});
 
-		socket.on("connected",function(){
+		io.on("connect",function(){
+			debug("Successfully connected to the %s", url);
 			isConnected = true;
 		});
 
-		function create_uuid(){
-			return mb_server.uuid();
-		}
-
-		ret.resolve({
-			uuid:mb_server.uuid,
-
-			connect:function(my_id, callback){
-				if(!my_id){
-					my_id = this.uuid();
-				}
-
-				socket.emit("mb_connect",{client_id:my_id});
-
-				callback(			{
-					is_connected:function(){
-						return isConnected;
-					},
-					publish:function(topic, msg, to){
-						if(!isConnected){
-							return false;
-						}
-						socket.emit("mb_send",{topic:topic, msg:msg, to:to});
-						return true;
-					},
-					on:function(topic, callback, from, uuid){
-						if(!isConnected){
-							return false;
-						}
-						var callback_id = uuid || create_uuid();
-						socket.on(callback_id,function(msg){
-							callback(msg);
-						});
-						socket.emit("mb_subscribe",{topic:topic,callback: callback_id,from:from});
-						listeners[callback_id] = {
-							topic:topic,
-							callback:callback,
-							from:from
-						};
-						return callback_id;
-					},
-					once:function(topic, callback, from){
-						var self;
-						var uuid = this.on(topic,function(msg){
-							self.off(uuid);
-							callback(msg);
-						},from);
-					},
-					off:function(callback_id){
-						if(!callback_id || !isConnected){
-							return false;
-						}
-						socket.emit("mb_unsubscribe",{callback:callback_id});
-						socket.off(callback_id);
-						delete listeners[callback_id];
-						return true;
-					},
-					request:function(api, query, to){
-						if(!isConnected){
-							return Promise.error({disconnected:true});
-						}
-						var pr = new Promise();
-						var callback_id = create_uuid();
-						socket.on(callback_id,function(results){
-							if(results.error){
-								pr.reject(results.error)
-							}else {
-								pr.resolve(results);
-							}
-						});
-						socket.emit("mb_request",{api:api, query:query, callback:callback_id, to:to});
-						return pr;
-					},
-					addRequestHandler:function(api, callback, limit_from){
-						var callback_id = create_uuid();
-						socket.on(callback_id,function(payload){
-							var results = callback(payload.query,payload.from);
-							if(Promise.is(results)){
-								results.then(function(data){
-									socket.emit(payload.callback, data);// return the response
-								})
-							}else{
-								socket.emit(payload.callback, results);// return the response
-							}
-
-						});
-						socket.emit("mb_add_request_handler",{api:api,callback:callback_id,limit_from:limit_from});
-						return callback_id;
-					}
-				});
-
-			}
-		});
 	}
 
-	return ret;
+	function create_uuid(){
+		return mb_server.uuid();
+	}
+
+	return {
+		connected: false,
+		ssn: create_uuid(),
+		connect:function(id, callback){
+			var self = this;
+
+			if(!isConnected) {
+				setTimeout(function(){
+					self.connect(id,callback);
+				},500);
+				return;
+			}
+
+			if(!id){
+				id = this.uuid();
+			}
+
+			if(isHost){
+				mb_server.connect(id, function(mBus){
+					callback(mBus);
+				});
+				return;
+			}
+
+			if(isConnected) {
+				io.emit("mb_connect", {client_id: id, ssn:this.ssn});
+			}
+
+			var bus = {
+				is_connected:function(){
+					return isConnected;
+				},
+				publish:function(topic, msg, to){
+					if(!isConnected){
+						return false;
+					}
+					io.emit("mb_send",{topic:topic, msg:msg, to:to});
+					return true;
+				},
+				on:function(topic, callback, from, uuid){
+					if(!isConnected){
+						return false;
+					}
+					var callback_id = uuid || create_uuid();
+					io.on(callback_id,function(msg){
+						callback(msg);
+					});
+					io.emit("mb_subscribe",{topic:topic,callback: callback_id,from:from});
+					listeners[callback_id] = {
+						topic:topic,
+						callback:callback,
+						from:from
+					};
+					return callback_id;
+				},
+				once:function(topic, callback, from){
+					var self;
+					var uuid = this.on(topic,function(msg){
+						self.off(uuid);
+						callback(msg);
+					},from);
+				},
+				off:function(callback_id){
+					if(!callback_id || !isConnected){
+						return false;
+					}
+					io.emit("mb_unsubscribe",{callback:callback_id});
+					io.off(callback_id);
+					delete listeners[callback_id];
+					return true;
+				},
+				request:function(api, query, to){
+					if(!isConnected){
+						return Promise.error({disconnected:true});
+					}
+					var pr = new Promise();
+					var callback_id = create_uuid();
+					io.on(callback_id,function(results){
+						if(results.error){
+							pr.reject(results.error)
+						}else {
+							pr.resolve(results);
+						}
+					});
+					io.emit("mb_request",{api:api, query:query, callback:callback_id, to:to});
+					return pr;
+				},
+				addRequestHandler:function(api, callback, limit_from){
+					var callback_id = create_uuid();
+					io.on(callback_id,function(payload){
+						var results = callback(payload.query,payload.from);
+						if(Promise.is(results)){
+							results.then(function(data){
+								io.emit(payload.callback, data);// return the response
+							})
+						}else{
+							io.emit(payload.callback, results);// return the response
+						}
+
+					});
+					io.emit("mb_add_request_handler",{api:api,callback:callback_id,limit_from:limit_from});
+					return callback_id;
+				}
+			};
+
+			io.on("mb_accepted", function (auth) {
+				self.connected = true;
+				if(auth.ssn == self.ssn) {
+					callback(bus);
+				}
+			});
+
+			io.on("connect",function(){// reconnected after disconnection
+				io.emit("mb_connect", {client_id: id, ssn:self.ssn});
+				isConnected = true;
+			});
+
+			io.on("disconnect",function(){
+				self.connected = isConnected = false;
+			});
+		}
+	};
 	//return mb_server;
 };
 
-module.exports.inject = connect_inject;
+ioBus.inject = connect_inject;
+
+module.exports = ioBus;
+
