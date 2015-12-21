@@ -56,7 +56,7 @@
                     return CPromise.error({disconnected:true});
                 }
 				var pr = new CPromise();
-				var callback_id = create_uuid();
+				var callback_id = "Request_" + api + "_" + create_uuid();
 				socket.on(callback_id,function(results){
 					if(results.error){
 						pr.reject(results.error)
