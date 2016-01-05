@@ -25,7 +25,7 @@ var ioBus = function(server,express_app){
 		// handle
 		httpServer.on('error',function(msg){
 			if(msg.code == 'EADDRINUSE') {
-				console.log("Another server is running on the port %s", server);
+				debug("Another server is running on the port %s", server);
 				// debug("Server failure.. stopping");
 				// connect to the other server
 				connectAsClient("http://localhost:" + server);
