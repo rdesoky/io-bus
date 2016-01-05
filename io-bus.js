@@ -16,16 +16,22 @@ var ioBus = function(server,express_app){
 	if(server == undefined){
 		server = 9666;
 	}
+	debug("Starting io-bus..");
 	var io, httpServer;
 
 	if(typeof server == "number"){// bind to port number
+		debug("Creating http server on port %s", server);
+
 		httpServer = require("http").Server(httpServerHandler);
 		httpServer.listen(server);
 		io = new socket_io(httpServer);
+
 		// handle
 		httpServer.on('error',function(msg){
+			debug("io Error %s", JSON.stringify(msg));
+
 			if(msg.code == 'EADDRINUSE') {
-				debug("Another server is running on the port %s", server);
+				//debug("Another server is running on the port %s", server);
 				// debug("Server failure.. stopping");
 				// connect to the other server
 				connectAsClient("http://localhost:" + server);
@@ -33,6 +39,7 @@ var ioBus = function(server,express_app){
 		});
 	}
 	else{ // bind to existing http server
+		debug("Binding to http server");
 		io = new socket_io(server);// attach to passed http server
 		if(express_app){
 			express_app.use("/io-bus/web-client.js",function(req,res,next){
