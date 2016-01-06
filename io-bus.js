@@ -10,6 +10,7 @@ var subscribers = {};
 var client_version = "1.0.3";
 var debug = require("debug")("io-bus");
 var connect_inject = require('connect-inject');
+var listeners = {};
 
 var ioBus = function(server,express_app){
 
