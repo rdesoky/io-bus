@@ -149,7 +149,7 @@ var MsgBusManager = {
 				},1);
 			},
             publish:function(){
-                return this.send.call(this,arguments);
+                return this.send.apply(this,arguments);
             },
 			request:function(api, params, timeout, to){
 				var callback = "response_" + api + "_" + uuid();
