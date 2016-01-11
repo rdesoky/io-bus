@@ -13,31 +13,45 @@ var connect_inject = require('connect-inject');
 var listeners = {};
 
 var ioBus = function(server,express_app){
+	var io, httpServer;
+	var isConnected = false;
+	var isHost = false;
 
 	if(server == undefined){
 		server = 9666;
 	}
 	debug("Starting io-bus..");
-	var io, httpServer;
 
 	if(typeof server == "number"){// bind to port number
 		debug("Creating http server on port %s", server);
 
 		httpServer = require("http").Server(httpServerHandler);
 		httpServer.listen(server);
-		io = new socket_io(httpServer);
 
-		// handle
+		debug("Adding socket.io listener", server);
+		io = new socket_io(httpServer);
+		io.on("connect", onClientConnect);// install host socket interface
+
+		var hDelaySuccess = setTimeout(function(){
+			isHost = true;
+			isConnected = true;// connected to local message bus
+		},3000);
+
+
+		// handle error
 		httpServer.on('error',function(msg){
 			debug("io Error %s", JSON.stringify(msg));
 
 			if(msg.code == 'EADDRINUSE') {
 				//debug("Another server is running on the port %s", server);
 				// debug("Server failure.. stopping");
-				// connect to the other server
+				// connect to the remote server
 				connectAsClient("http://localhost:" + server);
 			}
+
+			clearTimeout(hDelaySuccess);
 		});
+
 	}
 	else{ // bind to existing http server
 		debug("Binding to http server");
@@ -55,8 +69,6 @@ var ioBus = function(server,express_app){
 	}
 
 	//httpServer = io.httpServer;
-
-	io.on("connect", connectAsHost);// install host socket interface
 
 	function httpServerHandler(req,res){
 		if (req.url == "/io-bus/web-client.js") {
@@ -92,16 +104,13 @@ var ioBus = function(server,express_app){
 
 	}
 
-	var isConnected = false;
-	var isHost = false;
 	// install host socket interface
-	function connectAsHost(socket){// client connection
-		isHost = true;
-		isConnected = true;
+	function onClientConnect(socket){// client connection
 
 		// authorization should be added before
 		debug("A client has connected to socket.io");
-		var socket_owner, msg_bus;
+		var socket_owner,
+			msg_bus;// connected client message bus
 
 		socket.on("mb_connect",function(auth){// mb_connect should be { app_id:<app_id>, client_id:<client_id> }
 
@@ -221,11 +230,14 @@ var ioBus = function(server,express_app){
 			var self = this;
 
 			if(!isConnected) {
+				debug("Trying to connect");
 				setTimeout(function(){
 					self.connect(id,callback);
 				},500);
 				return;
 			}
+
+			debug("Connected as %s", isHost ? 'host':'client');
 
 			if(!id){
 				id = this.uuid();
@@ -252,6 +264,9 @@ var ioBus = function(server,express_app){
 					}
 					io.emit("mb_send",{topic:topic, msg:msg, to:to});
 					return true;
+				},
+				send:function(){
+					return this.publish.apply(this, arguments);
 				},
 				on:function(topic, callback, from, uuid){
 					if(!isConnected){
@@ -320,6 +335,7 @@ var ioBus = function(server,express_app){
 			};
 
 			io.on("mb_accepted", function (auth) {
+				debug("Recieved mb_accepted");
 				self.connected = true;
 				if(auth.ssn == self.ssn) {
 					callback(bus);
