@@ -17,6 +17,10 @@ var listeners = {
 var handle2topic = {};
 var free_handle = 0;
 
+var reqHandlers = {
+//"{unique_handle}": "{api}"
+};
+
 function uuid(){
 	var d = new Date().getTime();
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -44,8 +48,8 @@ function deliverMessage(msg){
 				listeners_count ++;
 				//setTimeout(function(){
 				//	var listener_info = this;
-					debug("Delivering a Msg to subscriber(" + listener_info.listener_id + "):" + JSON.stringify(msg) );
-					listener_info.callback({from: msg.from, topic:msg.topic, data:msg.data});
+				debug("Delivering a Msg to subscriber(" + listener_info.listener_id + "):" + JSON.stringify(msg) );
+				listener_info.callback({from: msg.from, topic:msg.topic, data:msg.data});
 				//}.bind(listener_info),1);
 			}else{
 				//debug("Unqualified Message");
@@ -148,12 +152,28 @@ var MsgBusManager = {
 					})
 				},1);
 			},
-            publish:function(){
-                return this.send.apply(this,arguments);
-            },
+			publish:function(){
+				return this.send.apply(this,arguments);
+			},
 			request:function(api, params, timeout, to){
 				var callback = "response_" + api + "_" + uuid();
 				debug( "ReqRouter received request(" + api + "), with query(" + JSON.stringify(params) + ") from(" + my_id + ")");
+
+				var foundHandler = false;
+				for(var handle in reqHandlers){
+					if(reqHandlers.hasOwnProperty(handle)){
+						if(reqHandlers[handle] == api){
+							foundHandler=true;
+							break;
+						}
+					}
+				}
+
+				if(!foundHandler){
+					debug( "No handler found for request(" + api + ")");
+					return Promise.reject({error:"no handlers found"});
+				}
+
 				var retPromise = this.once(callback, timeout, to);
 
 				this.send("request",{
@@ -169,8 +189,8 @@ var MsgBusManager = {
 			addRequestHandler:function(api, callback, limit_from/*optional*/){
 				debug("ReqRouter registers request(" + api + ") handler for (" + (limit_from || "all" ) + ")" );
 				var self = this;
-				return this.on("request",function(request){
-					debug("ReqRouter received request(" + request.api + "), data(" + JSON.stringify(request.data) + "), from(" + request.from + ")");
+				var handle = this.on("request",function(request){
+					debug("ReqRouter received request(" + request.data.api + "), params(" + JSON.stringify(request.data.params) + "), from(" + request.from + ")");
 					if(request.data.api == api){
 						var response = callback(request.data.params,request.from);
 						Promise.as(response).then(function(return_val){
@@ -178,6 +198,10 @@ var MsgBusManager = {
 						});
 					}
 				},limit_from);
+
+				reqHandlers[handle] = api;
+
+				return handle;
 			},
 			/*
 			 Usage:
@@ -200,6 +224,7 @@ var MsgBusManager = {
 					if(topic && listeners[topic]){
 						delete handle2topic[handle];
 						delete listeners[topic][handle];
+						delete reqHandlers[handle];
 						return true;
 					}
 
@@ -210,6 +235,7 @@ var MsgBusManager = {
 							if(listeners[topic][handle].callback == callback){
 								delete handle2topic[handle];
 								delete listeners[topic][handle];
+								delete reqHandlers[handle];
 								return true;
 							}
 						}
@@ -222,6 +248,7 @@ var MsgBusManager = {
 						if(listeners[topic][handle].callback == callback){
 							delete handle2topic[handle];
 							delete listeners[topic][handle];
+							delete reqHandlers[handle];
 							return true;
 						}
 					}
@@ -233,9 +260,9 @@ var MsgBusManager = {
 			}
 		};
 
-        return setTimeout(function(){
-	        callback(MsgBusConnection);
-        },1);
+		return setTimeout(function(){
+			callback(MsgBusConnection);
+		},1);
 	}
 };
 
