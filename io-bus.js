@@ -204,7 +204,7 @@ var ioBus = function(server,express_app){
 	function connectAsClient(url){
 		isHost = false;
 		isConnected = false;
-		io = socket_io_client("http://localhost:" + server);
+		io = socket_io_client(url);
 
 		io.on("disconnect",function(){
 			debug("Disconnected from the server on port %s", server);
