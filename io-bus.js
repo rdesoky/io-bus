@@ -300,7 +300,7 @@ var ioBus = function(server,express_app){
 					delete listeners[callback_id];
 					return true;
 				},
-				request:function(api, query, to){
+				request:function(api, query, timeout, to){
 					if(!isConnected){
 						return Promise.error({disconnected:true});
 					}
@@ -313,7 +313,7 @@ var ioBus = function(server,express_app){
 							pr.resolve(results);
 						}
 					});
-					io.emit("mb_request",{api:api, query:query, callback:callback_id, to:to});
+					io.emit("mb_request",{api:api, query:query, callback:callback_id, to:to, timeout:timeout});
 					return pr;
 				},
 				addRequestHandler:function(api, callback, limit_from){
