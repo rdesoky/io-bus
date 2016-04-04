@@ -51,7 +51,7 @@
 				delete listeners[callback_id];
                 return true;
 			},
-			request:function(api, query, to){
+			request:function(api, query, timeout, to){
                 if(!isConnected){
                     return CPromise.error({disconnected:true});
                 }
@@ -64,7 +64,7 @@
 						pr.resolve(results);
 					}
 				});
-				socket.emit("mb_request",{api:api, query:query, callback:callback_id, to:to});
+				socket.emit("mb_request",{api:api, query:query, callback:callback_id, to:to, timeout: timeout});
 				return pr;
 			}
 		};
