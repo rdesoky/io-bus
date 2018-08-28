@@ -7,7 +7,7 @@ var mb_server = require("./message_bus");
 var Promise = require("js-promise");
 var request_handlers = {};
 var subscribers = {};
-var client_version = "1.0.4";
+var client_version = "1.0.5";
 var debug = require("debug")("io-bus");
 var connect_inject = require('connect-inject');
 var listeners = {};
@@ -15,7 +15,8 @@ var listeners = {};
 var ioBus = function(server,express_app){
 	var io, httpServer;
 	var isConnected = false;
-	var isHost = false;
+    var isHost = false;
+    var injectedJS = "";
 
 	if(server == undefined){
 		server = 9666;
@@ -99,7 +100,10 @@ var ioBus = function(server,express_app){
 		}
 		var scriptContent =read(require.resolve("./resources/socket.io.js"), 'utf-8') +
 			read(require.resolve("./resources/js-promise.js"), 'utf-8') +
-			webClient;
+            webClient;
+        if(injectedJS){
+            scriptContent += injectedJS;
+        }
 		res.end(scriptContent);
 
 	}
@@ -224,6 +228,10 @@ var ioBus = function(server,express_app){
 	}
 
 	return {
+        injectJS:function(js){
+            injectedJS += ";" + js;
+            return this;//for chaining
+        },
 		connected: false,
 		ssn: create_uuid(),
 		connect:function(id, callback){
@@ -349,7 +357,9 @@ var ioBus = function(server,express_app){
 
 			io.on("disconnect",function(){
 				self.connected = isConnected = false;
-			});
+            });
+            
+            return this;//For chaining
 		}
 	};
 	//return mb_server;
