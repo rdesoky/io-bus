@@ -59,7 +59,7 @@
 				var callback_id = "Request_" + api + "_" + create_uuid();
 				socket.on(callback_id,function(results){
 					if(results.error){
-						pr.reject(results.error)
+						pr.reject(results.error);
 					}else {
 						pr.resolve(results);
 					}

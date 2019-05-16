@@ -48,7 +48,7 @@ function deliverMessage(msg){
 				listeners_count ++;
 				//setTimeout(function(){
 				//	var listener_info = this;
-				debug("Delivering a Msg to subscriber(" + listener_info.listener_id + "):" + JSON.stringify(msg) );
+				debug("Delivering a Msg to subscriber(" + listener_info.listener_id + "):" + JSON.stringify(msg).substr(0,512) );
 				listener_info.callback({from: msg.from, topic:msg.topic, data:msg.data});
 				//}.bind(listener_info),1);
 			}else{
@@ -66,7 +66,7 @@ function deliverMessage(msg){
 		callListeners(listeners["*"]);
 	}
 
-	debug("The msg: " + JSON.stringify(msg) + " has been delivered to (" + listeners_count + ") subscribers");
+	debug("The msg: " + JSON.stringify(msg).substr(0,512) + " has been delivered to (" + listeners_count + ") subscribers");
 }
 
 var MsgBusManager = {
@@ -124,13 +124,15 @@ var MsgBusManager = {
 					}
 				}, from);
 
+				time_out = time_out || 30000;
+
 				hTimeout = setTimeout(function () {
 					if (hListener) {
 						self.off(hListener);
 						hListener = 0;
-						ret.reject({error: "timeout"});
+						ret.reject({error: "timeout(" + time_out + ") waiting for " + topic});
 					}
-				}, time_out || 15000);
+				}, time_out);
 
 				return ret;
 			},
@@ -141,7 +143,7 @@ var MsgBusManager = {
 				}catch(e){
 					info_str = data;
 				}
-				debug("Publishing to topic(" + topic + "), content(" + info_str + ") to(" + (to ? to : "all") + ")");
+				debug("Publishing to topic(" + topic + "), content(" + info_str.substr(0,512) + ") to(" + (to ? to : "all") + ")");
 
 				setTimeout(function(){
 					deliverMessage({
@@ -157,12 +159,12 @@ var MsgBusManager = {
 			},
 			request:function(api, params, timeout, to){
 				var callback = "response_" + api + "_" + uuid();
-				debug( "ReqRouter received request(" + api + "), with query(" + JSON.stringify(params) + ") from(" + my_id + ")");
+				debug( "ReqRouter received request(" + api + "), with query(" + JSON.stringify(params).substr(0,512) + ") from(" + my_id + ")");
 
 				var foundHandler = false;
 				for(var handle in reqHandlers){
 					if(reqHandlers.hasOwnProperty(handle)){
-						if(reqHandlers[handle] == api){
+						if(reqHandlers[handle] == api || reqHandlers[handle] == "*"){
 							foundHandler=true;
 							break;
 						}
@@ -171,7 +173,7 @@ var MsgBusManager = {
 
 				if(!foundHandler){
 					debug( "No handler found for request(" + api + ")");
-					return Promise.reject({error:"no handlers found"});
+					return Promise.reject({error:"no handlers found for " + api});
 				}
 
 				var retPromise = this.once(callback, timeout, to);
@@ -190,7 +192,7 @@ var MsgBusManager = {
 				debug("ReqRouter registers request(" + api + ") handler for (" + (limit_from || "all" ) + ")" );
 				var self = this;
 				var handle = this.on("request",function(request){
-					debug("ReqRouter received request(" + request.data.api + "), params(" + JSON.stringify(request.data.params) + "), from(" + request.from + ")");
+					debug("ReqRouter received request(" + request.data.api + "), params(" + JSON.stringify(request.data.params).substr(0,512) + "), from(" + request.from + ")");
 					if(request.data.api == api){
 						var response = callback(request.data.params,request.from);
 						Promise.as(response).then(function(return_val){
