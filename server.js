@@ -1,16 +1,13 @@
+#!/usr/bin/env node
+
 /**
  * Created by ramy on 12/15/2015.
+ * Last update: 5/23/2019
  */
 
-var io = require("./io-bus");
-var debug = require("debug")("io-bus");
+console.log("Connecting to port 9666...");
 
-var port = process.argv[2] || 9666;
-//try{
-	io(port);
-//}catch(e){
-//	console.log("Server Already running on port %s", port);
-//	return;
-//}
-
-debug("Started io-bus server on http://localhost:%s", port);
+require("./io-bus")(9666).connect("BackendServices", function(msgBus) {
+	console.log("*** io-bus is now routing messages on port 9666 ***");
+	console.log("Press Ctrl+c to terminate it.");
+});
