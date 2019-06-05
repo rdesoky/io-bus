@@ -6,12 +6,11 @@
  */
 
 var fs = require("fs");
-var path = require("path");
 
 console.log("Connecting to port 9666...");
 
 require("./io-bus")(9666)
-	.injectJS(fs.readFileSync(path.resolve("ccontainer_apis.js"), "utf8"))
+	.injectJS(fs.readFileSync(require.resolve("./ccontainer_apis.js"), "utf8"))
 	.connect("BackendServices", function(msgBus) {
 		console.log("*** io-bus is now routing messages on port 9666 ***");
 		console.log(
