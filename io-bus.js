@@ -7,7 +7,7 @@ var mb_server = require("./message_bus");
 var Promise = require("js-promise");
 var request_handlers = {};
 var subscribers = {};
-var client_version = "1.0.5";
+var client_version = "1.0.6";
 var debug = require("debug")("io-bus");
 var connect_inject = require('connect-inject');
 var listeners = {};
@@ -74,7 +74,7 @@ var ioBus = function(server,express_app){
 	function httpServerHandler(req,res){
 		if (req.url == "/io-bus/web-client.js") {
 			debug("Requested " + req.url);
-			serveClient(req, res, "http://localhost:" + server);// pass url to pass to client connection
+			serveClient(req, res, req.headers ? req.headers.host : null);// pass url to pass to client connection
 		}else {
 			res.writeHead(404);
 			res.end();
@@ -96,10 +96,12 @@ var ioBus = function(server,express_app){
 		res.writeHead(200);
 		var webClient = read(require.resolve("./web-client.js"), 'utf-8');
 		if(url){//replace io(/*{host}*/) if not served by express app
-			webClient = webClient.replace("/*{host}*/",'"' + url + '"');
+			webClient = webClient.replace("/*{host}*/",'"//' + url + '"');
 		}
 		var scriptContent =read(require.resolve("./resources/socket.io.js"), 'utf-8') +
+			"\n" + 
 			read(require.resolve("./resources/js-promise.js"), 'utf-8') +
+			"\n" +
             webClient;
         if(injectedJS){
             scriptContent += injectedJS;

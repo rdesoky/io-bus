@@ -3,8 +3,9 @@
  */
 (function(){
 
-	var MsgBus = function(client_id, connection_callback){
-		var socket = io(/*{host}*/);
+	var MsgBus = function(client_id, connection_callback, host){
+		var detectedHost = String(/*{host}*/);
+		var socket = io(host || detectedHost);
 		var listeners = {};
 		var isConnected = false;
 
