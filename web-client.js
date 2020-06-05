@@ -1,5 +1,7 @@
 /**
- * Created by ramy on 9/2/2015.
+ * web-client.js
+ * Created by Ramy Eldesoky on 9/2/2015.
+ * Last update 6/5/2020
  */
 (function(){
 
@@ -7,9 +9,10 @@
 		var detectedHost = String(/*{host}*/);
 		var socket = io(host || detectedHost);
 		var listeners = {};
+		var requestHandlers = {};
 		var isConnected = false;
 
-		var exports = {
+		var bus = {
 			is_connected:function(){
 				return isConnected;
 			},
@@ -67,6 +70,27 @@
 				});
 				socket.emit("mb_request",{api:api, query:query, callback:callback_id, to:to, timeout: timeout});
 				return pr;
+			},
+			addRequestHandler: function(api, callback, limit_from){
+				var callback_id = create_uuid();
+				socket.on(callback_id,function(payload){
+					var results = callback(payload.query,payload.from);
+					if(CPromise.is(results)){
+						results.then(function(data){
+							socket.emit(payload.callback, data);// return the response
+						})
+					}else{
+						socket.emit(payload.callback, results);// return the response
+					}
+				});
+				socket.emit("mb_add_request_handler",{api:api,callback:callback_id,limit_from:limit_from});
+				requestHandlers[callback_id] = callback;
+				return callback_id;
+			},
+			removeRequestHandler: function(id){
+				socket.emit("mb_remove_request_handler",{id:id});
+				socket.off(id);
+				delete requestHandlers[id];
 			}
 		};
 
@@ -83,7 +107,7 @@
 			isConnected = false;
 			connection_callback(false);
 		});
-		return exports;
+		return bus;
 	};
 
 	if(typeof define === "function" && define.amd ){//AMD RequireJS
