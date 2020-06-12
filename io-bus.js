@@ -30,7 +30,7 @@ var ioBus = function(server,express_app){
 		httpServer.listen(server);
 
 		debug("Adding socket.io listener", server);
-		io = new socket_io(httpServer);
+		io = new socket_io(httpServer, {origins: "*:*"});
 		io.on("connect", onClientConnect);// install host socket interface
 
 		var hDelaySuccess = setTimeout(function(){
@@ -56,7 +56,7 @@ var ioBus = function(server,express_app){
 	}
 	else{ // bind to existing http server
 		debug("Binding to http server");
-		io = new socket_io(server);// attach to passed http server
+		io = new socket_io(server, {origins: "*:*"});// attach to passed http server
 		if(express_app){
 			express_app.use("/io-bus/web-client.js",function(req,res,next){
 				serveClient(req,res);
@@ -98,12 +98,12 @@ var ioBus = function(server,express_app){
 		if(url){//replace io(/*{host}*/) if not served by express app
 			webClient = webClient.replace("/*{host}*/",'"//' + url + '"');
 		}
-		var scriptContent =read(require.resolve("./resources/socket.io.js"), 'utf-8') +
+		var scriptContent =
+			webClient + 
 			"\n" + 
-			read(require.resolve("./resources/js-promise.js"), 'utf-8') +
-			"\n" +
-            webClient;
-        if(injectedJS){
+			read(require.resolve("./resources/socket.io.js"), 'utf-8');
+
+		if(injectedJS){
             scriptContent += injectedJS;
         }
 		res.end(scriptContent);
