@@ -1,6 +1,6 @@
 {
 	"name": "io-bus",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "",
 	"main": "io-bus.js",
 	"bin": {
@@ -20,7 +20,6 @@
 	"dependencies": {
 		"connect-inject": "^0.4.0",
 		"debug": "^2.2.0",
-		"js-promise": "^0.3.2",
-		"socket.io": "^2.3.0"
+		"socket.io": "^2.4.1"
 	}
 }
